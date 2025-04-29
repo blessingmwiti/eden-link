@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { AiService } from '../../../core/services/ai.service';
+import { AIService } from '../../../services/ai.service';
 
 @Component({
   selector: 'app-ai-chatbot',
@@ -10,13 +10,14 @@ export class AiChatbotComponent implements OnInit {
   isChatOpen = false;
   messages: { text: string, fromUser: boolean, timestamp: Date }[] = [];
   newMessage = '';
+  isLoading = false;
   
-  constructor(private aiService: AiService) { }
+  constructor(private aiService: AIService) { }
 
   ngOnInit(): void {
     // Initial welcome message
     this.messages.push({
-      text: 'Hello! I\'m your Eden Link AI assistant. How can I help you today?',
+      text: 'Hello! I\'m your Eden Link AI assistant. I can help you with agricultural advice, crop management, and farm optimization. How can I assist you today?',
       fromUser: false,
       timestamp: new Date()
     });
@@ -27,7 +28,7 @@ export class AiChatbotComponent implements OnInit {
   }
   
   sendMessage(): void {
-    if (!this.newMessage.trim()) return;
+    if (!this.newMessage.trim() || this.isLoading) return;
     
     // Add user message
     this.messages.push({
@@ -39,15 +40,17 @@ export class AiChatbotComponent implements OnInit {
     // Store and clear message input
     const userQuery = this.newMessage;
     this.newMessage = '';
+    this.isLoading = true;
     
     // Get AI response
-    this.aiService.getResponse(userQuery).subscribe(
+    this.aiService.chat(userQuery).subscribe(
       (response) => {
         this.messages.push({
           text: response,
           fromUser: false,
           timestamp: new Date()
         });
+        this.isLoading = false;
       },
       (error) => {
         console.error('Error getting AI response:', error);
@@ -57,6 +60,7 @@ export class AiChatbotComponent implements OnInit {
           fromUser: false,
           timestamp: new Date()
         });
+        this.isLoading = false;
       }
     );
   }
