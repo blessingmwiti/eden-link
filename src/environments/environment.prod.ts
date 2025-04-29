@@ -10,5 +10,6 @@ export const environment = {
       cropRoadmap: true,
       trainingModule: true
     },
-    debugMode: false
+    debugMode: false,
+    googleAiApiKey: 'your_production_api_key_here'
   };

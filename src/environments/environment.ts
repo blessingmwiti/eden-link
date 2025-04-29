@@ -20,6 +20,7 @@ export const environment = {
       suggestions: '/ai/suggestions',
       predictions: '/ai/predictions',
       optimization: '/ai/optimization'
-    }
+    },
+    googleAiApiKey: 'your_api_key_here'
   };
   

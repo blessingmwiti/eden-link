@@ -33,7 +33,8 @@
         "@shared/*": ["src/app/shared/*"],
         "@features/*": ["src/app/features/*"],
         "@environments/*": ["src/environments/*"]
-      }
+      },
+      "types": ["node"]
     },
     "angularCompilerOptions": {
       "enableI18nLegacyMessageIdFormat": false,
