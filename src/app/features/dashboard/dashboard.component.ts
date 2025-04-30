@@ -8,6 +8,7 @@ import { Sensor } from '../../core/models/sensor.model';
 import { ChartConfiguration } from 'chart.js';
 import { Crop, CropStage } from '../../core/models/crop.model';
 import { SystemHealthSuggestion, SensorMetrics } from '../../core/models/ai.model';
+import { AIService } from '../../services/ai.service';
 
 interface CurrentMetrics {
   temperature: number;
@@ -57,7 +58,8 @@ interface SystemHealth {
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  private updateInterval$ = interval(5000);
+  private readonly REFRESH_INTERVAL = 300000; // 5 minutes in milliseconds (5 * 60 * 1000)
+  private updateInterval$ = interval(this.REFRESH_INTERVAL);
 
   currentMetrics: CurrentMetrics = {
     temperature: 24,
@@ -160,7 +162,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private sensorService: SensorService,
-    private aiService: AiService,
+    private aiService: AIService,
     private cropService: CropService
   ) {}
 
@@ -241,46 +243,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private updateSystemHealth(): void {
-    const isOptimal = (value: number, min: number, max: number) => 
-      value >= min && value <= max;
-
-    // Get current crop types
-    const cropTypes = this.cropCycles.map(cycle => cycle.crop.name);
-
-    // Get AI-powered suggestions using mock implementation
-    this.aiService.getSystemHealthSuggestions(this.currentMetrics, cropTypes)
+    this.aiService.getSystemHealthAnalysis(this.currentMetrics)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (suggestions: SystemHealthSuggestion[]) => {
-          // Process suggestions and update system health
-          const criticalSuggestions = suggestions.filter(s => s.type === 'critical');
-          const warningSuggestions = suggestions.filter(s => s.type === 'warning');
-
-          if (criticalSuggestions.length > 0) {
-            this.systemHealth = {
-              status: 'critical',
-              message: criticalSuggestions[0].message,
-              suggestions: criticalSuggestions.flatMap(s => s.suggestedActions)
-            };
-          } else if (warningSuggestions.length > 0) {
-            this.systemHealth = {
-              status: 'warning',
-              message: warningSuggestions[0].message,
-              suggestions: warningSuggestions.flatMap(s => s.suggestedActions)
-            };
-          } else {
-            this.systemHealth = {
-              status: 'excellent',
-              message: 'All systems functioning optimally based on AI analysis.',
-              suggestions: ['Continue current environmental settings', 'Regular monitoring recommended']
-            };
-          }
+        next: (response: string) => {
+          // Parse the AI response to determine status
+          const status = this.determineStatusFromAIResponse(response);
+          this.systemHealth = {
+            status: status,
+            message: response,
+            suggestions: this.extractSuggestions(response)
+          };
         },
-        error: (error) => {
-          console.error('Error getting AI suggestions:', error);
+        error: (error: Error) => {
+          console.error('Error getting AI analysis:', error);
           this.updateSystemHealthFallback();
         }
       });
+  }
+
+  private determineStatusFromAIResponse(response: string): 'excellent' | 'warning' | 'critical' {
+    if (response.toLowerCase().includes('critical') || response.toLowerCase().includes('urgent')) {
+      return 'critical';
+    } else if (response.toLowerCase().includes('warning') || response.toLowerCase().includes('caution')) {
+      return 'warning';
+    }
+    return 'excellent';
+  }
+
+  private extractSuggestions(response: string): string[] {
+    const suggestions: string[] = [];
+    const lines = response.split('\n');
+    let inSuggestionsSection = false;
+
+    for (const line of lines) {
+      if (line.includes('✅ Recommended actions')) {
+        inSuggestionsSection = true;
+        continue;
+      }
+      if (inSuggestionsSection && line.trim().startsWith('•')) {
+        suggestions.push(line.trim().substring(1).trim());
+      }
+    }
+
+    return suggestions.length > 0 ? suggestions : ['Continue current environmental settings'];
   }
 
   private updateSystemHealthFallback(): void {

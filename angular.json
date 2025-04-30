@@ -54,7 +54,10 @@
               "buildOptimizer": false,
               "sourceMap": true,
               "optimization": false,
-              "namedChunks": true
+              "namedChunks": true,
+              "allowedCommonJsDependencies": [
+                "dotenv"
+              ]
             },
             "configurations": {
               "production": {
@@ -136,5 +139,8 @@
         }
       }
     },
-    "defaultProject": "eden-link"
+    "defaultProject": "eden-link",
+    "cli": {
+      "analytics": false
+    }
   }
